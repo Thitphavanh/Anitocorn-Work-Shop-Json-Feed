@@ -1,6 +1,8 @@
+import 'package:anitocorn_work_shop_json_feed/models/youtubes.dart';
 import 'package:anitocorn_work_shop_json_feed/services/auth_service.dart';
 import 'package:anitocorn_work_shop_json_feed/services/network.dart';
 import 'package:flutter/material.dart';
+import 'package:transparent_image/transparent_image.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -11,11 +13,11 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   AuthService authService = AuthService();
-  List<String> dummy = List<String>.generate(20, (index) => "Row: ${index}");
+
+  String type = "superhero";
 
   @override
   Widget build(BuildContext context) {
-    Network.fetchYoutube();
     return Scaffold(
       appBar: AppBar(
         title: const Text("Home"),
@@ -31,26 +33,42 @@ class _HomeState extends State<Home> {
           ),
         ],
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(
-              "assets/background17.jpg",
-            ),
-            fit: BoxFit.cover,
-          ),
+      body: Center(
+        child: FutureBuilder<List<Youtube>>(
+          future: Network.fetchYoutube(type: type),
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              return Container(
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage(
+                      "assets/background17.jpg",
+                    ),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: _listSection(youtubes: snapshot.data),
+              );
+            } else if (snapshot.hasError) {
+              return Text("${snapshot.error}");
+            }
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          },
         ),
-        child: _listSection(),
       ),
     );
   }
 
-  _listSection() => ListView.builder(
-        itemCount: dummy.length,
+  _listSection({List<Youtube>? youtubes}) => ListView.builder(
+        itemCount: youtubes!.length,
         itemBuilder: (context, index) {
           if (index == 0) {
             return _headerImageSection();
           }
+
+          var item = youtubes[index];
           return Card(
             margin: const EdgeInsets.only(
               bottom: 10.0,
@@ -59,9 +77,9 @@ class _HomeState extends State<Home> {
             ),
             child: Column(
               children: [
-                _headerSectionCard(),
-                _bodySectionCard(),
-                _footerSectionCard(),
+                _headerSectionCard(youtube: item),
+                _bodySectionCard(youtube: item),
+                _footerSectionCard(youtube: item),
               ],
             ),
           );
@@ -82,39 +100,43 @@ class _HomeState extends State<Home> {
           fit: BoxFit.cover,
         ),
       );
-  _headerSectionCard() => ListTile(
+  _headerSectionCard({Youtube? youtube}) => ListTile(
         leading: SizedBox(
           height: 50.0,
           width: 50.0,
           child: CircleAvatar(
             backgroundColor: Colors.white,
-            child: Image.asset(
-              "assets/uniswap.png",
+            child: FadeInImage.memoryNetwork(
+              placeholder: kTransparentImage,
+              image: youtube!.avatarImage,
               fit: BoxFit.cover,
             ),
           ),
         ),
-        title: const Text(
-          "Phenomenal",
+        title: Text(
+          youtube.title,
           overflow: TextOverflow.ellipsis,
           maxLines: 1,
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.w500,
             fontSize: 18.0,
           ),
         ),
-        subtitle: const Text(
-          "Blog",
+        subtitle: Text(
+          youtube.subtitle,
           overflow: TextOverflow.ellipsis,
           maxLines: 1,
         ),
       );
-  _bodySectionCard() => Image.asset(
-        "assets/background19.jpg",
+  _bodySectionCard({Youtube? youtube}) => FadeInImage.memoryNetwork(
+        height: 180.0,
+        width: double.infinity,
+        placeholder: kTransparentImage,
+        image: youtube!.youtubeImage,
         fit: BoxFit.cover,
       );
 
-  _footerSectionCard() => Row(
+  _footerSectionCard({Youtube? youtube}) => Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           _customElevatedButton(iconData: Icons.thumb_up, label: "Like"),
@@ -122,12 +144,13 @@ class _HomeState extends State<Home> {
         ],
       );
   _customElevatedButton({IconData? iconData, String? label}) => TextButton(
-      onPressed: () {},
-      child: Row(
-        children: [
-          Icon(iconData),
-          const SizedBox(width: 8.0),
-          Text(label!),
-        ],
-      ));
+        onPressed: () {},
+        child: Row(
+          children: [
+            Icon(iconData),
+            const SizedBox(width: 8.0),
+            Text(label!),
+          ],
+        ),
+      );
 }

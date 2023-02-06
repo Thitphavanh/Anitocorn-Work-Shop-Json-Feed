@@ -3,6 +3,7 @@ import 'package:anitocorn_work_shop_json_feed/services/auth_service.dart';
 import 'package:anitocorn_work_shop_json_feed/services/network.dart';
 import 'package:flutter/material.dart';
 import 'package:transparent_image/transparent_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -13,8 +14,18 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   AuthService authService = AuthService();
+  final typeArray = const ["superhero", "foods", "songs", "traning"];
+  final GlobalKey<RefreshIndicatorState> _refresh =
+      GlobalKey<RefreshIndicatorState>();
+  final ScrollController _scrollController = ScrollController();
+  int index = 0;
+  String? type;
 
-  String type = "superhero";
+  @override
+  void initState() {
+    super.initState();
+    type = typeArray[index];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +58,11 @@ class _HomeState extends State<Home> {
                     fit: BoxFit.cover,
                   ),
                 ),
-                child: _listSection(youtubes: snapshot.data),
+                child: RefreshIndicator(
+                  key: _refresh,
+                  child: _listSection(youtubes: snapshot.data),
+                  onRefresh: _handleRefresh,
+                ),
               );
             } else if (snapshot.hasError) {
               return Text("${snapshot.error}");
@@ -58,10 +73,42 @@ class _HomeState extends State<Home> {
           },
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.black,
+        tooltip: "reload",
+        onPressed: () {
+          if (index >= typeArray.length - 1) {
+            index = 0;
+          } else {
+            index++;
+          }
+          type = typeArray[index];
+
+          _refresh.currentState!.show();
+          _scrollController.animateTo(
+            0,
+            duration: const Duration(seconds: 1),
+            curve: Curves.easeInOut,
+          );
+
+          _handleRefresh();
+        },
+        child: const Icon(
+          Icons.refresh,
+        ),
+      ),
     );
   }
 
+  Future<void> _handleRefresh() async {
+    await Future.delayed(
+      const Duration(seconds: 2),
+    );
+    setState(() {});
+  }
+
   _listSection({List<Youtube>? youtubes}) => ListView.builder(
+        controller: _scrollController,
         itemCount: youtubes!.length,
         itemBuilder: (context, index) {
           if (index == 0) {
@@ -69,12 +116,21 @@ class _HomeState extends State<Home> {
           }
 
           var item = youtubes[index];
+
+          bool last = youtubes.length == (index + 1);
+
           return Card(
-            margin: const EdgeInsets.only(
-              bottom: 10.0,
-              right: 20.0,
-              left: 20.0,
-            ),
+            margin: last
+                ? const EdgeInsets.only(
+                    bottom: 90.0,
+                    right: 20.0,
+                    left: 20.0,
+                  )
+                : const EdgeInsets.only(
+                    bottom: 10.0,
+                    right: 20.0,
+                    left: 20.0,
+                  ),
             child: Column(
               children: [
                 _headerSectionCard(youtube: item),
@@ -128,29 +184,60 @@ class _HomeState extends State<Home> {
           maxLines: 1,
         ),
       );
-  _bodySectionCard({Youtube? youtube}) => FadeInImage.memoryNetwork(
-        height: 180.0,
-        width: double.infinity,
-        placeholder: kTransparentImage,
-        image: youtube!.youtubeImage,
-        fit: BoxFit.cover,
+  _bodySectionCard({Youtube? youtube}) => GestureDetector(
+        onTap: () {
+          launchURL(youtubeId: youtube.id);
+        },
+        child: FadeInImage.memoryNetwork(
+          height: 180.0,
+          width: double.infinity,
+          placeholder: kTransparentImage,
+          image: youtube!.youtubeImage,
+          fit: BoxFit.cover,
+        ),
       );
 
   _footerSectionCard({Youtube? youtube}) => Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          _customElevatedButton(iconData: Icons.thumb_up, label: "Like"),
-          _customElevatedButton(iconData: Icons.share, label: "Share"),
+          _customElevatedButton(
+            iconData: Icons.thumb_up,
+            label: "Like",
+            colors: Colors.black,
+          ),
+          _customElevatedButton(
+            iconData: Icons.share,
+            label: "Share",
+            colors: Colors.black,
+          ),
         ],
       );
-  _customElevatedButton({IconData? iconData, String? label}) => TextButton(
+  _customElevatedButton({IconData? iconData, String? label, Color? colors}) =>
+      TextButton(
         onPressed: () {},
         child: Row(
           children: [
-            Icon(iconData),
+            Icon(
+              iconData,
+              color: colors,
+            ),
             const SizedBox(width: 8.0),
-            Text(label!),
+            Text(
+              label!,
+              style: TextStyle(
+                color: colors,
+              ),
+            ),
           ],
         ),
       );
+
+  launchURL({String? youtubeId}) async {
+    final url = Uri.parse('https://www.youtube.com/watch?v=${youtubeId}');
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else {
+      throw "Could not launch $url";
+    }
+  }
 }

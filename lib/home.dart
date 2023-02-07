@@ -2,8 +2,11 @@ import 'package:anitocorn_work_shop_json_feed/models/youtubes.dart';
 import 'package:anitocorn_work_shop_json_feed/services/auth_service.dart';
 import 'package:anitocorn_work_shop_json_feed/services/network.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:transparent_image/transparent_image.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import 'detail.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -35,10 +38,7 @@ class _HomeState extends State<Home> {
         actions: [
           IconButton(
             onPressed: () {
-              authService.logout();
-
-              Navigator.pushNamedAndRemoveUntil(
-                  context, '/login', (route) => false);
+              showLogoutAlertDialog();
             },
             icon: const Icon(Icons.exit_to_app),
           ),
@@ -157,15 +157,24 @@ class _HomeState extends State<Home> {
         ),
       );
   _headerSectionCard({Youtube? youtube}) => ListTile(
-        leading: SizedBox(
-          height: 50.0,
-          width: 50.0,
-          child: CircleAvatar(
-            backgroundColor: Colors.white,
-            child: FadeInImage.memoryNetwork(
-              placeholder: kTransparentImage,
-              image: youtube!.avatarImage,
-              fit: BoxFit.cover,
+        leading: GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => Detail(youtube: youtube),
+              ),
+            );
+          },
+          child: SizedBox(
+            height: 50.0,
+            width: 50.0,
+            child: ClipOval(
+              child: FadeInImage.memoryNetwork(
+                placeholder: kTransparentImage,
+                image: youtube!.avatarImage,
+                fit: BoxFit.cover,
+              ),
             ),
           ),
         ),
@@ -204,17 +213,23 @@ class _HomeState extends State<Home> {
             iconData: Icons.thumb_up,
             label: "Like",
             colors: Colors.black,
+            text: youtube!.title,
           ),
           _customElevatedButton(
             iconData: Icons.share,
             label: "Share",
             colors: Colors.black,
+            text: youtube.title,
           ),
+          const SizedBox(width: 12.0),
         ],
       );
-  _customElevatedButton({IconData? iconData, String? label, Color? colors}) =>
+  _customElevatedButton(
+          {IconData? iconData, String? label, Color? colors, String? text}) =>
       TextButton(
-        onPressed: () {},
+        onPressed: () {
+          // print(text);
+        },
         child: Row(
           children: [
             Icon(
@@ -239,5 +254,39 @@ class _HomeState extends State<Home> {
     } else {
       throw "Could not launch $url";
     }
+  }
+
+  void showLogoutAlertDialog() async {
+    SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
+
+    // ignore: use_build_context_synchronously
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Are you sure?"),
+          content: Text(
+              "${sharedPreferences.getString(AuthService.username)} to logout"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                authService.logout();
+
+                Navigator.pushNamedAndRemoveUntil(
+                    context, '/login', (route) => false);
+              },
+              child: const Text("Yes"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("No"),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

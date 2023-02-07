@@ -258,7 +258,6 @@ class _HomeState extends State<Home> {
 
   void showLogoutAlertDialog() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-
     // ignore: use_build_context_synchronously
     showDialog(
       context: context,
@@ -272,7 +271,6 @@ class _HomeState extends State<Home> {
             TextButton(
               onPressed: () {
                 authService.logout();
-
                 Navigator.pushNamedAndRemoveUntil(
                     context, '/login', (route) => false);
               },
